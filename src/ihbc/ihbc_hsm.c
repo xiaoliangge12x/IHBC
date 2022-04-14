@@ -1,13 +1,14 @@
 
 #include "ihbc/ihbc_hsm.h"
-#include "ihbc/ihbc_params.h"
 
-//
+// ------------------------- global variable def ---------------------------------
+static uint32 g_ihbc_signal_bitfields = 0U;
+// ------------------------- func def  -------------------------------------------
 void InitUser()
 {
-    memset(&ihbc_result, 0, sizeof(IHBCResult));
-    memset(&work_condition, 0, sizeof(WorkCondition));
-    memset(&veh_info, 0, sizeof(VehicleInfo));
+    memset(&simulink_data.ihbc_result, 0, sizeof(IHBCResult));
+    memset(&simulink_data.work_condition, 0, sizeof(WorkCondition));
+    memset(&simulink_data.veh_info, 0, sizeof(VehicleInfo));
     memset(&output, 0, sizeof(IHBC2VehicleInfo));
     // 刷新状态分发函数指针数组
     g_dispatchArray[IHBC_RUNNING]      = dispatchForIHBCRunning;
@@ -34,32 +35,31 @@ void RunUser(const IHBCResult* ihbc_result, const WorkCondition* work_condition,
     // 更新参数
     UpdateParams(ihbc_result, work_condition, veh_info);
 
-    static uint8_t ihbc_event = IHBC_USER_START;
+    static uint8_t ihbc_event  = IHBC_USER_START;
     static bool    grave_error = false;
     
-    // SIT 分析, 严重故障
-    grave_error = ValidateSIT(veh_info->IFC_SysCalibrationSt);
+    // SIT 分析, 严重故障判断
+    grave_error = ValidateSIT(ihbc_result, work_condition, veh_info);
 
     // 事件判断
-    if (IsIHBCNotActive(veh_info->IFC_HMA_Enable, veh_info->BCM_LowBeamSt, 
-        veh_info->BCM_HighBeamSt)) {
+    if (IsIHBCNotActive()) {
         ihbc_event = IHBC_EVENT_DISABLE;
     } else if (grave_error) {
         ihbc_event = IHBC_EVENT_ERROR;
-    } else if (DetectBlindness(veh_info->IFC_CameraBlockageSt)) {
+    } else if (DetectBlindness()) {
         ihbc_event = IHBC_EVENT_BLINDNESS;
     // ------------------- 路灯  ---------------------------------
-    } else if (RoadlightingCond(ihbc_result->light_source)) {
+    } else if (RoadlightingCond()) {
         ihbc_event = IHBC_EVENT_ROADLIGHTING;
     // ------------------- 环境光亮度 -----------------------------
-    } else if (BrightnessCond(ihbc_result->cal_lux_up)) {
+    } else if (BrightnessCond()) {
         ihbc_event = IHBC_EVENT_BRIGHTNESS;
     } else if (GlareCond()) {
         ihbc_event = IHBC_EVENT_GLARE;
-    } else if (BadWeatherCond(work_condition->category.property_type, work_condition->category.property)) {
+    } else if (BadWeatherCond()) {
         ihbc_event = IHBC_EVENT_BADWEATHER;
     // ------------------ 车辆运动状态 ----------------------------
-    } else if (VehSpdTooLow(veh_info->BCS_VehSpdVD, veh_info->BCS_VehSpd)) {
+    } else if (VehSpdTooLow()) {
         ihbc_event = IHBC_EVENT_VELTOOLOW;
     } else if (OvertakingCond()) {
         ihbc_event = IHBC_EVENT_OVERTAKING;
@@ -72,7 +72,7 @@ void RunUser(const IHBCResult* ihbc_result, const WorkCondition* work_condition,
     } else {
         ihbc_event = IHBC_EVENT_NOTRAFFIC;
     }
-
+    // LOG(COLOR_RED, "event_id: %d", ihbc_event);
     // 进行状态分发
     Dispatch(ihbc_event);
     
@@ -82,73 +82,102 @@ void RunUser(const IHBCResult* ihbc_result, const WorkCondition* work_condition,
     Dispatch(ihbc_event);
 }
 
-bool IsIHBCNotActive(const uint8 hma_enable, const uint8 low_beam_st, const uint8 high_beam_st)
+bool ValidateSIT(const IHBCResult* ihbc_result, const WorkCondition* work_condition,
+    const VehicleInfo* veh_info)
 {
-    return ((!hma_enable) || (!low_beam_st && !high_beam_st));
+    if (veh_info->IFC_SysCalibrationSt != CAM_SYS_CALI_SUCCESS) {
+        return true;
+    }
+
+    g_ihbc_signal_bitfields = 0; 
+    if (!veh_info->IFC_HMA_Enable || (!veh_info->BCM_LowBeamSt && !veh_info->BCM_HighBeamSt)) {
+        SetSignalBitFields(&g_ihbc_signal_bitfields, IHBC_BITNO_DISABLE);
+    }
+
+    if (veh_info->IFC_CameraBlockageSt) {
+        SetSignalBitFields(&g_ihbc_signal_bitfields, IHBC_BITNO_BLINDNESS);
+    }
+
+    if (ihbc_result->cal_lux_up >= K_EnvBrightnessThreshold) {
+        SetSignalBitFields(&g_ihbc_signal_bitfields, IHBC_BITNO_BRIGHTNESS);
+    }
+
+    if (!veh_info->BCS_VehSpdVD || veh_info->BCS_VehSpd < K_VehSpdThreshold) {
+        SetSignalBitFields(&g_ihbc_signal_bitfields, IHBC_BITNO_VELTOOLOW);
+    }
+
+    if (ihbc_params.is_bad_weather_cond) {
+        SetSignalBitFields(&g_ihbc_signal_bitfields, IHBC_BITNO_BADWEATHER);
+    }
+
+    if (ihbc_params.oncoming_min_distance <= K_OncomingDistanceThreshold) {
+        SetSignalBitFields(&g_ihbc_signal_bitfields, IHBC_BITNO_ONCOMING);
+    }
+
+    if (ihbc_params.preceding_min_distance <= K_PrecedingDistanceThreshold) {
+        SetSignalBitFields(&g_ihbc_signal_bitfields, IHBC_BITNO_PRECEDING);
+    }
+    return false;
 }
 
-bool ValidateSIT(const uint8 cali_st)
+bool IsIHBCNotActive()
 {
-    return (cali_st == CAM_SYS_CALI_SUCCESS);
+    return IsBitSet(g_ihbc_signal_bitfields, IHBC_BITNO_DISABLE);
 }
 
-bool DetectBlindness(const uint8 cam_blocked)
+bool DetectBlindness()
 {
-    return cam_blocked;
+    return IsBitSet(g_ihbc_signal_bitfields, IHBC_BITNO_BLINDNESS);
 }
 
-bool RoadlightingCond(const LightSource light_src)
+// TODO: 判断路灯
+bool RoadlightingCond()
 {
-    return (light_src.type == LIGHT_SOURCE_STREETLIGHT);
+    return IsBitSet(g_ihbc_signal_bitfields, IHBC_BITNO_ROADLIGHTING);
 }
 
-bool BrightnessCond(const float32 env_lux)
+// TODO: 判断亮度
+bool BrightnessCond()
 {
-    return (env_lux >= K_EnvBrightnessThreshold);
+    return IsBitSet(g_ihbc_signal_bitfields, IHBC_BITNO_BRIGHTNESS);
 }
 
-bool VehSpdTooLow(const uint8 veh_spd_vd, const float32 veh_spd)
+bool VehSpdTooLow()
 {
-    return (!veh_spd_vd || veh_spd < K_VehSpdThreshold);
+    return IsBitSet(g_ihbc_signal_bitfields, IHBC_BITNO_VELTOOLOW);
 }
 
 bool OvertakingCond()
 {
     // TODO:
-    return false;
+    return IsBitSet(g_ihbc_signal_bitfields, IHBC_BITNO_OVERTAKING);
 }
 
 bool OnComingCond()
 {
     // TODO:
-    return false;   
+    return IsBitSet(g_ihbc_signal_bitfields, IHBC_BITNO_ONCOMING);
 }
 
 bool PrecedingCond()
 {
     // TODO:
-    return false;
+    return IsBitSet(g_ihbc_signal_bitfields, IHBC_BITNO_PRECEDING);
 }
 
 bool GlareCond()
 {
     // TODO:
-    return false;
+    return IsBitSet(g_ihbc_signal_bitfields, IHBC_BITNO_GLARE);
 }
 
-bool BadWeatherCond(const uint8 property_type, const uint8 weather_type)
+bool BadWeatherCond()
 {
-    if (property_type == WORK_CONDITION_WEATHER) {
-        if ((weather_type == WEATHER_HEAVYRAIN) || (weather_type == WEATHER_RAINY) ||
-            (weather_type == WEATHER_SNOWY) || (weather_type == WEATHER_OTHER)) {
-            return true;
-        }
-    }
-    return false;
+    return IsBitSet(g_ihbc_signal_bitfields, IHBC_BITNO_BADWEATHER);
 }
 
 bool DrivePastCond()
 {
     // TODO:
-    return false;
+    return IsBitSet(g_ihbc_signal_bitfields, IHBC_BITNO_DRIVEPAST);
 }

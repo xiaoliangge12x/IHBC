@@ -1,0 +1,46 @@
+VehicleInfo:
+  IFC_HMA_Enable: 0     
+  BCM_LowBeamSt: 1
+  BCM_HighBeamSt: 0
+  IFC_SysCalibrationSt: 0
+  IFC_CameraBlockageSt: 0
+  BCS_VehSpdVD: 1
+  BCS_VehSpd: 31.0
+
+IHBCResult:
+  object_num: 4
+  light_source_num: 4
+  light_source_0:
+    type: 0
+    distance: 10
+  light_source_1:
+    type: 0
+    distance: 11 
+  light_source_2:
+    type: 0
+    distance: 12
+  light_source_3:
+    type: 0
+    distance: 13
+  cal_lux_up: 11.0
+
+WorkCondition:
+  category_num: 4
+  category_0:
+    property_type: 0
+    property: 0
+    property_conf: 0.75
+  category_1:
+    property_type: 1
+    property: 1
+    property_conf: 0.6
+  category_2:
+    property_type: 2
+    property: 0
+    property_conf: 0.6
+  category_3:
+    property_type: 3
+    property: 4
+    property_conf: 0.6
+
+  

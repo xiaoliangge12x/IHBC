@@ -3,7 +3,9 @@
 
 #include "common.h"
 
-#define TYPE_NAME_MAX_LEN 20U
+#define TYPE_NAME_MAX_LEN   20U
+#define LIGHTSOURCE_MAX_NUM 64U
+#define CATEGORY_MAX_NUM    4U
 
 // ------------------------------ typedef ----------------------------------------
 typedef enum {
@@ -96,15 +98,15 @@ typedef struct {
 typedef struct {
     Header      header;             // 帧头信息
     uint8       light_on;           // 大灯状态：1 开启， 0 关闭
-    LightSource light_source;       // 处理后灯源信息
+    LightSource light_source[LIGHTSOURCE_MAX_NUM];       // 处理后灯源信息
     float32     cal_lux_up;         // 环境光亮度
-    LightSource light_source_raw;   // 原始灯源信息
+    LightSource light_source_raw[LIGHTSOURCE_MAX_NUM];   // 原始灯源信息
     int32       object_num;         // 光源检测数量
 } IHBCResult;
 
 typedef struct {
-    Header header;        // 帧头信息
-    Category category;    // 工况类型
+    Header   header;                        // 帧头信息
+    Category category[CATEGORY_MAX_NUM];    // 工况类型
 } WorkCondition;
 
 typedef struct {
@@ -122,4 +124,10 @@ typedef struct {
     uint8 IFC_HMA_St;              // HMA的状态
     uint8 IFC_HMA_HighBeamReq;     // HMA 远光灯请求， 1-请求远光灯  ，0-请求近光灯
 } IHBC2VehicleInfo;
+
+typedef struct {
+    IHBCResult       ihbc_result;
+    WorkCondition    work_condition;
+    VehicleInfo      veh_info;
+} SimulinkData;
 #endif

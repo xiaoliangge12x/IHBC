@@ -13,6 +13,7 @@ HsmRet dispatchForIHBCRunning(const uint8_t event)
             return HSM_TRAN;
         }
 
+        case IHBC_EVENT_BADWEATHER:
         case IHBC_EVENT_GLARE: {
             g_hsm.currentSt = IHBC_GLARE;
             return HSM_TRAN;
@@ -59,8 +60,13 @@ HsmRet dispatchForIHBCRunning(const uint8_t event)
         }
 
         case IHBC_EVENT_NOTRAFFIC: {
-            g_hsm.currentSt = IHBC_NOTRAFFIC;
-            return HSM_TRAN;
+            if (!IsExpired(ONCOMING_TIMING) || !IsExpired(PRECEDING_TIMING)) {
+                LOG(COLOR_YELLOW, "time is not expired");
+                return HSM_HANDLED;
+            } else {
+                g_hsm.currentSt = IHBC_NOTRAFFIC;
+                return HSM_TRAN;
+            }
         }
 
         default: {
@@ -169,6 +175,12 @@ HsmRet dispatchForOncoming(const uint8_t event)
             return HSM_HANDLED;
         }
 
+        case HSM_EXIT: {
+            exitForOncoming();
+            LOG(COLOR_GREEN, "dispatchForOncoming EXIT");
+            return HSM_HANDLED;
+        }
+
         default: {
             g_hsm.currentSt = IHBC_RUNNING;
             return HSM_SUPER;
@@ -181,6 +193,11 @@ HsmRet dispatchForPreceding(const uint8_t event)
     switch (event) {
         case IHBC_WORK: {
             workInPreceding();
+            return HSM_HANDLED;
+        }
+
+        case HSM_EXIT: {
+            exitForPreceding();
             return HSM_HANDLED;
         }
 

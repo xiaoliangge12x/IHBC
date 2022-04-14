@@ -20,7 +20,7 @@ void Dispatch(const uint8_t event)
         sourceSt = g_hsm.currentSt;
         ret = g_dispatchArray[g_hsm.currentSt](event);
     } while (ret == HSM_SUPER);
-    LOG("[Dispatch] sourceSt: %d, g_hsm.currentSt: %d", sourceSt, g_hsm.currentSt);
+    LOG(COLOR_NONE, "[Dispatch] sourceSt: %d, g_hsm.currentSt: %d", sourceSt, g_hsm.currentSt);
     // 需要跳转
     if (ret == HSM_TRAN) {
         // 保存跳转的目标状态

@@ -2,60 +2,71 @@
 
 void workInDisable()
 {
-    LOG("Disable St.");
+    LOG(COLOR_NONE, "Disable St.");
 }
 
 void workInFailure()
 {
-    LOG("Failure St.");
+    LOG(COLOR_NONE, "Failure St.");
 }
 
 void workInGlare()
 {
-    LOG("Glare St.");
+    LOG(COLOR_NONE, "Glare St.");
 }
 
 void workInRoadlighting()
 {
-    LOG("RoadLighting St.");
+    LOG(COLOR_NONE, "RoadLighting St.");
 }
 
 void workInOvertaking()
 {
-    LOG("OverTaking St.");
+    LOG(COLOR_NONE, "OverTaking St.");
 }
 
 void workInBrightness()
 {
-    LOG("Brightnes St.");
+    LOG(COLOR_NONE, "Brightnes St.");
 }
 
 void workInOncoming()
 {
-    LOG("OnComing St.");
+    LOG(COLOR_NONE, "OnComing St.");
 }
 
 void workInPreceding()
 {
-    LOG("Preceding St.");
+    LOG(COLOR_NONE, "Preceding St.");
 }
 
 void workInBlindness()
 {
-    LOG("Blindness St.");
+    LOG(COLOR_NONE, "Blindness St.");
 }
 
 void workInDrivePast()
 {
-    LOG("DrivePast St.");
+    LOG(COLOR_NONE, "DrivePast St.");
 }
 
 void workInVehTooLow()
 {
-    LOG("Veh Too Low St.");
+    LOG(COLOR_NONE, "Veh Too Low St.");
 }
 
 void workInNoTraffic()
 {
-    LOG("No Traffic st.");
+    LOG(COLOR_NONE, "No Traffic st.");
+}
+
+// 状态exit函数
+void exitForOncoming()
+{
+    SetExpiredTime(ONCOMING_TIMING, K_OncommingDisappearThreshold);
+}
+
+void exitForPreceding()
+{
+    SetExpiredTime(PRECEDING_TIMING, K_PrecedingDisappearThreshold);
 }

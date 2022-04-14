@@ -40,6 +40,23 @@ typedef enum {
     IHBC_EVENT_NOTRAFFIC,         // 无交通流
 } IhbcEvent;
 
+typedef enum {
+    IHBC_BITNO_WORK = 0,
+    IHBC_BITNO_DISABLE,
+    IHBC_BITNO_NOOBJECTDATA,      // 无障碍物数据
+    IHBC_BITNO_GLARE,             // 眩光
+    IHBC_BITNO_BADWEATHER,        // 恶劣天气
+    IHBC_BITNO_ROADLIGHTING,      // 路灯
+    IHBC_BITNO_OVERTAKING,        // 超车
+    IHBC_BITNO_DRIVEPAST,         // 被超车
+    IHBC_BITNO_BRIGHTNESS,        // 环境亮度
+    IHBC_BITNO_ONCOMING,          // 对向来车
+    IHBC_BITNO_PRECEDING,         // 跟车
+    IHBC_BITNO_BLINDNESS,         // 致盲
+    IHBC_BITNO_VELTOOLOW,         // 车速过低
+    IHBC_BITNO_NOTRAFFIC,
+} IhbcEventBitNo;
+
 // 给到
 typedef enum {
     HMA_OFF = 0,
