@@ -1,7 +1,7 @@
 # 源文件
 FILE(GLOB SRC_FILE "*.c" "base/*.c" "ihbc/*.c" "tool/*.c")
 
-MESSAGE(${SRC_FILE})
+# MESSAGE(${SRC_FILE})
 
 # 指定头文件路径
 set(INCLUDE_PATH ${CMAKE_SOURCE_DIR}/include)
